@@ -1,4 +1,5 @@
 using MagicConchShell.Models;
+using MagicConchShell.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,7 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 var connectString = builder.Configuration["ConnectionString:DefaultConnection"];
 
-builder.Services.AddDbContext<SpongebobsContext>( optionsBuilder => optionsBuilder.UseMySQL(connectString));
+builder.Services.AddDbContext<SpongebobsContext>(options => options.UseMySQL(connectString));
+
+builder.Services.Configure<LineBotSettings>(builder.Configuration.GetSection("LineBot"));
+
+builder.Services.AddSingleton<LineBotService>();
+
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
