@@ -101,7 +101,20 @@ namespace MagicConchShell.Services
                                         }
                                     };
                                     ReplyMessageHandler("text", noResult);
-                                } else
+                                }
+                                else if (matchingTitleData.Count > 5) {
+                                    var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                    {
+                                        ReplyToken = eventObject.ReplyToken,
+                                        Messages = new List<TextMessageDto>
+                                        {
+                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果請重新下關鍵字！！"}
+                                        }
+                                    };
+                                    ReplyMessageHandler("text", manyResult);
+                                }
+
+                                else
                                 {
                                     var urls = new List<TextMessageDto>();
                                     foreach (var data in matchingTitleData)
