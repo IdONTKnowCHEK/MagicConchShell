@@ -8,7 +8,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MagicConchShell.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("/")]
     [ApiController]
     public class SpongebobsController : ControllerBase
     {
