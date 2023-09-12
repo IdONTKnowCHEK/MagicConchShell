@@ -6,7 +6,9 @@ using MagicConchShell.Models;
 using MagicConchShell.Providers;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
+using System.Security.Policy;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MagicConchShell.Services
 {
@@ -89,46 +91,159 @@ namespace MagicConchShell.Services
                         switch (eventObject.Message.Type)
                         {
                             case MessageTypeEnum.Text:
-                                var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(eventObject.Message.Text)).ToList();
-                                if (matchingTitleData.Count == 0)
+                                if (eventObject.Source.Type != "group")
                                 {
-                                    var noResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                    var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(eventObject.Message.Text)).ToList();
+                                    if (matchingTitleData.Count == 0)
                                     {
-                                        ReplyToken = eventObject.ReplyToken,
-                                        Messages = new List<TextMessageDto>
+                                        var noResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                        {
+                                            ReplyToken = eventObject.ReplyToken,
+                                            Messages = new List<TextMessageDto>
                                         {
                                             new TextMessageDto() { Text = $"神奇海螺找不到關於\"{eventObject.Message.Text}\"的結果！"}
                                         }
-                                    };
-                                    ReplyMessageHandler("text", noResult);
-                                }
-                                else if (matchingTitleData.Count > 5) {
-                                    var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                        };
+                                        ReplyMessageHandler("text", noResult);
+                                    }
+                                    else if (matchingTitleData.Count > 5)
                                     {
-                                        ReplyToken = eventObject.ReplyToken,
-                                        Messages = new List<TextMessageDto>
+                                        var text = new List<TextMessageDto>();
+                                        string tempStr = "";
+                                        foreach (var data in matchingTitleData)
                                         {
-                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果請重新下關鍵字！！"}
+                                            tempStr = $"{tempStr}\n{data.Title}";
                                         }
-                                    };
-                                    ReplyMessageHandler("text", manyResult);
+                                        var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                        {
+                                            ReplyToken = eventObject.ReplyToken,
+                                            Messages = new List<TextMessageDto>
+                                        {
+                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果：{tempStr}"}
+                                        }
+                                        };
+                                        ReplyMessageHandler("text", manyResult);
+                                    }
+                                    else
+                                    {
+                                        var urls = new List<ImageMessageDto>();
+                                        foreach (var data in matchingTitleData)
+                                        {
+                                            urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
+                                        }
+                                        var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
+                                        {
+                                            ReplyToken = eventObject.ReplyToken,
+                                            Messages = urls
+                                        };
+                                        ReplyMessageHandler("image", replyMessage);
+                                    }
                                 }
-
                                 else
                                 {
-                                    var urls = new List<TextMessageDto>();
-                                    foreach (var data in matchingTitleData)
+                                    string inputString = eventObject.Message.Text;
+                                    string prefix = "*=";
+
+                                    if (inputString.StartsWith("*="))
                                     {
-                                        urls.Add(new TextMessageDto() { Text = data.Url });
+                                        string search = inputString.Substring(prefix.Length);
+                                        Console.WriteLine("TEST");
+                                        var matchingTitleData = spongebobDatas.Where(data => data.Title == search).ToList();
+                                        if (matchingTitleData.Count == 0)
+                                        {
+                                            var noResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                            {
+                                                ReplyToken = eventObject.ReplyToken,
+                                                Messages = new List<TextMessageDto>
+                                        {
+                                            new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
+                                        }
+                                            };
+                                            ReplyMessageHandler("text", noResult);
+                                        }
+                                        else if (matchingTitleData.Count > 5)
+                                        {
+                                            var text = new List<TextMessageDto>();
+                                            string tempStr = "";
+                                            foreach (var data in matchingTitleData)
+                                            {
+                                                tempStr = $"{tempStr}\n{data.Title}";
+                                            }
+                                            var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                            {
+                                                ReplyToken = eventObject.ReplyToken,
+                                                Messages = new List<TextMessageDto>
+                                        {
+                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果：{tempStr}"}
+                                        }
+                                            };
+                                            ReplyMessageHandler("text", manyResult);
+                                        }
+                                        else
+                                        {
+                                            var urls = new List<ImageMessageDto>();
+                                            foreach (var data in matchingTitleData)
+                                            {
+                                                urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
+                                            }
+                                            var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
+                                            {
+                                                ReplyToken = eventObject.ReplyToken,
+                                                Messages = urls
+                                            };
+                                            ReplyMessageHandler("image", replyMessage);
+                                        }
                                     }
-                                    var replyMessage = new ReplyMessageRequestDto<TextMessageDto>()
+                                    else if (inputString.StartsWith("*"))
                                     {
-                                        ReplyToken = eventObject.ReplyToken,
-                                        Messages = urls
-                                    };
-                                    ReplyMessageHandler("text", replyMessage);
+                                        string search = inputString.Substring(1, inputString.Length - 1);
+                                        var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(search)).ToList();
+                                        if (matchingTitleData.Count == 0)
+                                        {
+                                            var noResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                            {
+                                                ReplyToken = eventObject.ReplyToken,
+                                                Messages = new List<TextMessageDto>
+                                        {
+                                            new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
+                                        }
+                                            };
+                                            ReplyMessageHandler("text", noResult);
+                                        }
+                                        else if (matchingTitleData.Count > 1)
+                                        {
+                                            var text = new List<TextMessageDto>();
+                                            string tempStr = "";
+                                            foreach (var data in matchingTitleData)
+                                            {
+                                                tempStr = $"{tempStr}\n{data.Title}";
+                                            }
+                                            var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
+                                            {
+                                                ReplyToken = eventObject.ReplyToken,
+                                                Messages = new List<TextMessageDto>
+                                        {
+                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果：{tempStr}"}
+                                        }
+                                            };
+                                            ReplyMessageHandler("text", manyResult);
+                                        }
+                                        else
+                                        {
+                                            var urls = new List<ImageMessageDto>();
+                                            foreach (var data in matchingTitleData)
+                                            {
+                                                urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
+                                            }
+                                            var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
+                                            {
+                                                ReplyToken = eventObject.ReplyToken,
+                                                Messages = urls
+                                            };
+                                            ReplyMessageHandler("image", replyMessage);
+                                        }
+                                    }
                                 }
-                                
                                 break;
                             default:
                                 var reply = new ReplyMessageRequestDto<TextMessageDto>()
