@@ -14,7 +14,6 @@ namespace MagicConchShell.Services
 {
     public class LineBotService
     {
-        private readonly IOptions<LineBotSettings> _lineBotSettings;
         private readonly string accessToken;
         private readonly string channelSecret;
         private readonly string replyMessageUri = "https://api.line.me/v2/bot/message/reply";
@@ -37,7 +36,7 @@ namespace MagicConchShell.Services
         public async void ReplyMessage<T>(ReplyMessageRequestDto<T> request)
         {
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken); //帶入 channel access token
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             var json = _jsonProvider.Serialize(request);
             var requestMessage = new HttpRequestMessage
             {
@@ -88,78 +87,19 @@ namespace MagicConchShell.Services
                 switch (eventObject.Type)
                 {
                     case WebhookEventTypeEnum.Message:
+                        string input = eventObject.Message.Text;
                         switch (eventObject.Message.Type)
                         {
                             case MessageTypeEnum.Text:
                                 if (eventObject.Source.Type != "group")
                                 {
-                                    var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(eventObject.Message.Text)).ToList();
-                                    if (matchingTitleData.Count == 0)
+                                    if (input.StartsWith("="))
                                     {
-                                        var noResult = new ReplyMessageRequestDto<TextMessageDto>()
-                                        {
-                                            ReplyToken = eventObject.ReplyToken,
-                                            Messages = new List<TextMessageDto>
-                                        {
-                                            new TextMessageDto() { Text = $"神奇海螺找不到關於\"{eventObject.Message.Text}\"的結果！"}
-                                        }
-                                        };
-                                        ReplyMessageHandler("text", noResult);
-                                    }
-                                    else if (matchingTitleData.Count > 5)
-                                    {
-                                        var text = new List<TextMessageDto>();
-                                        string tempStr = "";
-                                        foreach (var data in matchingTitleData)
-                                        {
-                                            tempStr = $"{tempStr}\n{data.Title}";
-                                        }
-                                        var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
-                                        {
-                                            ReplyToken = eventObject.ReplyToken,
-                                            Messages = new List<TextMessageDto>
-                                        {
-                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果：{tempStr}"}
-                                        }
-                                        };
-                                        ReplyMessageHandler("text", manyResult);
-                                    }
-                                    else
-                                    {
-                                        var urls = new List<ImageMessageDto>();
-                                        foreach (var data in matchingTitleData)
-                                        {
-                                            urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
-                                        }
-                                        var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
-                                        {
-                                            ReplyToken = eventObject.ReplyToken,
-                                            Messages = urls
-                                        };
-                                        ReplyMessageHandler("image", replyMessage);
-                                    }
-                                }
-                                else
-                                {
-                                    string inputString = eventObject.Message.Text;
-                                    string prefix = "*=";
-
-                                    if (inputString.StartsWith("*="))
-                                    {
-                                        string search = inputString.Substring(prefix.Length);
-                                        Console.WriteLine("TEST");
+                                        string search = input.Substring(1, input.Length - 1);
                                         var matchingTitleData = spongebobDatas.Where(data => data.Title == search).ToList();
                                         if (matchingTitleData.Count == 0)
                                         {
-                                            var noResult = new ReplyMessageRequestDto<TextMessageDto>()
-                                            {
-                                                ReplyToken = eventObject.ReplyToken,
-                                                Messages = new List<TextMessageDto>
-                                        {
-                                            new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
-                                        }
-                                            };
-                                            ReplyMessageHandler("text", noResult);
+                                            TextReply(eventObject, $"神奇海螺找不到\"{search}\"！");
                                         }
                                         else if (matchingTitleData.Count > 5)
                                         {
@@ -169,46 +109,19 @@ namespace MagicConchShell.Services
                                             {
                                                 tempStr = $"{tempStr}\n{data.Title}";
                                             }
-                                            var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
-                                            {
-                                                ReplyToken = eventObject.ReplyToken,
-                                                Messages = new List<TextMessageDto>
-                                        {
-                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果：{tempStr}"}
-                                        }
-                                            };
-                                            ReplyMessageHandler("text", manyResult);
+                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
                                         }
                                         else
                                         {
-                                            var urls = new List<ImageMessageDto>();
-                                            foreach (var data in matchingTitleData)
-                                            {
-                                                urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
-                                            }
-                                            var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
-                                            {
-                                                ReplyToken = eventObject.ReplyToken,
-                                                Messages = urls
-                                            };
-                                            ReplyMessageHandler("image", replyMessage);
+                                            ImageReply(eventObject, matchingTitleData, true);
                                         }
                                     }
-                                    else if (inputString.StartsWith("*"))
+                                    else
                                     {
-                                        string search = inputString.Substring(1, inputString.Length - 1);
-                                        var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(search)).ToList();
+                                        var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(eventObject.Message.Text)).ToList();
                                         if (matchingTitleData.Count == 0)
                                         {
-                                            var noResult = new ReplyMessageRequestDto<TextMessageDto>()
-                                            {
-                                                ReplyToken = eventObject.ReplyToken,
-                                                Messages = new List<TextMessageDto>
-                                        {
-                                            new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
-                                        }
-                                            };
-                                            ReplyMessageHandler("text", noResult);
+                                            TextReply(eventObject, $"神奇海螺找不到關於\"{eventObject.Message.Text}\"的結果！");
                                         }
                                         else if (matchingTitleData.Count > 1)
                                         {
@@ -218,85 +131,123 @@ namespace MagicConchShell.Services
                                             {
                                                 tempStr = $"{tempStr}\n{data.Title}";
                                             }
-                                            var manyResult = new ReplyMessageRequestDto<TextMessageDto>()
-                                            {
-                                                ReplyToken = eventObject.ReplyToken,
-                                                Messages = new List<TextMessageDto>
-                                        {
-                                            new TextMessageDto() { Text = $"神奇海螺找到過多結果：{tempStr}"}
-                                        }
-                                            };
-                                            ReplyMessageHandler("text", manyResult);
+                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
                                         }
                                         else
                                         {
-                                            var urls = new List<ImageMessageDto>();
+                                            ImageReply(eventObject, matchingTitleData);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    string prefix = "*=";
+                                    if (input.StartsWith(prefix))
+                                    {
+                                        string search = input.Substring(prefix.Length);
+                                        var matchingTitleData = spongebobDatas.Where(data => data.Title == search).ToList();
+                                        if (matchingTitleData.Count == 0)
+                                        {
+                                            TextReply(eventObject, $"神奇海螺找不到關於\"{search}\"的結果！");
+                                        }
+                                        else if (matchingTitleData.Count > 5)
+                                        {
+                                            var text = new List<TextMessageDto>();
+                                            string tempStr = "";
                                             foreach (var data in matchingTitleData)
                                             {
-                                                urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
+                                                tempStr = $"{tempStr}\n{data.Title}";
                                             }
-                                            var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
+                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
+                                        }
+                                        else
+                                        {
+                                            ImageReply(eventObject, matchingTitleData, true);
+                                        }
+                                    }
+                                    else if (input.StartsWith("*"))
+                                    {
+                                        string search = input.Substring(1, input.Length - 1);
+                                        var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(search)).ToList();
+                                        Console.WriteLine(matchingTitleData);
+                                        if (matchingTitleData.Count == 0)
+                                        {
+                                            TextReply(eventObject, $"神奇海螺找不到關於\"{search}\"的結果！");
+                                        }
+                                        else if (matchingTitleData.Count > 1)
+                                        {
+                                            var text = new List<TextMessageDto>();
+                                            string tempStr = "";
+                                            foreach (var data in matchingTitleData)
                                             {
-                                                ReplyToken = eventObject.ReplyToken,
-                                                Messages = urls
-                                            };
-                                            ReplyMessageHandler("image", replyMessage);
+                                                tempStr = $"{tempStr}\n{data.Title}";
+                                            }
+                                            Console.WriteLine(tempStr);
+                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
+                                        }
+                                        else
+                                        {
+                                            ImageReply(eventObject, matchingTitleData);
                                         }
                                     }
                                 }
                                 break;
                             default:
-                                var reply = new ReplyMessageRequestDto<TextMessageDto>()
-                                {
-                                    ReplyToken = eventObject.ReplyToken,
-                                    Messages = new List<TextMessageDto>
-                                {
-                                    new TextMessageDto(){Text = "坐好！"}
-                                }
-                                };
-                                ReplyMessageHandler("text", reply);
+                                TextReply(eventObject, "坐好！");
                                 break;
                         }
                         break;
-                    case WebhookEventTypeEnum.Unsend:
-                        Console.WriteLine($"使用者{eventObject.Source.UserId}在聊天室收回訊息！");
-                        break;
-                    case WebhookEventTypeEnum.Follow:
-                        Console.WriteLine($"使用者{eventObject.Source.UserId}將我們新增為好友！");
-                        break;
-                    case WebhookEventTypeEnum.Unfollow:
-                        Console.WriteLine($"使用者{eventObject.Source.UserId}封鎖了我們！");
-                        break;
                     case WebhookEventTypeEnum.Join:
-                        Console.WriteLine("我們被邀請進入聊天室了！");
-                        break;
-                    case WebhookEventTypeEnum.Leave:
-                        Console.WriteLine("我們被聊天室踢出了");
-                        break;
-                    case WebhookEventTypeEnum.MemberJoined:
-                        string joinedMemberIds = "";
-                        foreach (var member in eventObject.Joined.Members)
+                        var state = new ReplyMessageRequestDto<TextMessageDto>()
                         {
-                            joinedMemberIds += $"{member.UserId} ";
-                        }
-                        Console.WriteLine($"使用者{joinedMemberIds}加入了群組！");
-                        break;
-                    case WebhookEventTypeEnum.MemberLeft:
-                        string leftMemberIds = "";
-                        foreach (var member in eventObject.Left.Members)
-                        {
-                            leftMemberIds += $"{member.UserId} ";
-                        }
-                        Console.WriteLine($"使用者{leftMemberIds}離開了群組！");
-                        break;
-                    case WebhookEventTypeEnum.Postback:
-                        Console.WriteLine($"使用者{eventObject.Source.UserId}觸發了postback事件");
-                        break;
-                    case WebhookEventTypeEnum.VideoPlayComplete:
-                        Console.WriteLine($"使用者{eventObject.Source.UserId}");
+                            ReplyToken = eventObject.ReplyToken,
+                            Messages = new List<TextMessageDto>
+                                {
+                                    new TextMessageDto(){Text = "加入群組的神奇小海螺需在關鍵字前面加上星字號 (ex: *好棒三點了)"}
+                                }
+                        };
+                        ReplyMessageHandler("text", state);
                         break;
                 }
             }
+        }
+
+        private void ImageReply(LineBotMessage.Dtos.WebhookEventsDto eventObject, List<SpongebobDatum> matchingTitleData, bool isExact = false)
+        {
+            var urls = new List<ImageMessageDto>();
+            foreach (var data in matchingTitleData)
+            {
+                urls.Add(new ImageMessageDto() { OriginalContentUrl = data.Url, PreviewImageUrl = data.Url });
+            }
+
+            if (isExact)
+            {
+                Random random = new Random();
+                int randomIndex = random.Next(urls.Count);
+                ImageMessageDto randomElement = urls[randomIndex];
+                urls.Clear();
+                urls.Add(randomElement);
+            }
+
+            var replyMessage = new ReplyMessageRequestDto<ImageMessageDto>()
+            {
+                ReplyToken = eventObject.ReplyToken,
+                Messages = urls
+            };
+            ReplyMessageHandler("image", replyMessage);
+        }
+
+        private void TextReply(LineBotMessage.Dtos.WebhookEventsDto eventObject, string textMessage)
+        {
+            var Reply = new ReplyMessageRequestDto<TextMessageDto>()
+            {
+                ReplyToken = eventObject.ReplyToken,
+                Messages = new List<TextMessageDto>
+                {
+                    new TextMessageDto() { Text = textMessage}
+                }
+            };
+            ReplyMessageHandler("text", Reply);
         }
     }
 }

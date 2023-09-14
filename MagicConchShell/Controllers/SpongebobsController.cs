@@ -1,4 +1,5 @@
 ﻿using MagicConchShell.Dtos.Webhook;
+using MagicConchShell.Filter;
 using MagicConchShell.Models;
 using MagicConchShell.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -34,32 +35,8 @@ namespace MagicConchShell.Controllers
             return _spongebobsContextContext.SpongebobData.ToList();
         }
 
-        // GET api/<SpongebobsController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
-
-        // POST api/<SpongebobsController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<SpongebobsController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<SpongebobsController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
-
         [HttpPost("Webhook")]
+        [LineVerifySignature]
         public IActionResult Webhook(WebhookRequestBodyDto body)
         {
             _lineBotService.ReceiveWebhook(body, _spongebobsContextContext.SpongebobData.ToList());
