@@ -1,4 +1,5 @@
-﻿using MagicConchShell.Dtos.Message;
+﻿using Google.Protobuf;
+using MagicConchShell.Dtos.Message;
 using MagicConchShell.Dtos.Message.Request;
 using MagicConchShell.Dtos.Webhook;
 using MagicConchShell.Enum;
@@ -23,7 +24,6 @@ namespace MagicConchShell.Services
 
         public LineBotService(IOptions<LineBotSettings> lineBotSettings)
         {
-            _lineBotSettings = lineBotSettings;
             accessToken = lineBotSettings.Value.AccessToken;
             channelSecret = lineBotSettings.Value.ChannelSecret;
         }
@@ -99,17 +99,15 @@ namespace MagicConchShell.Services
                                         var matchingTitleData = spongebobDatas.Where(data => data.Title == search).ToList();
                                         if (matchingTitleData.Count == 0)
                                         {
-                                            TextReply(eventObject, $"神奇海螺找不到\"{search}\"！");
+                                            var noResult = new List<TextMessageDto>
+                                            {
+                                                new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
+                                            };
+                                            TextReply(eventObject, noResult);
                                         }
                                         else if (matchingTitleData.Count > 5)
                                         {
-                                            var text = new List<TextMessageDto>();
-                                            string tempStr = "";
-                                            foreach (var data in matchingTitleData)
-                                            {
-                                                tempStr = $"{tempStr}\n{data.Title}";
-                                            }
-                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
+                                            overResult(eventObject, matchingTitleData);
                                         }
                                         else
                                         {
@@ -121,17 +119,15 @@ namespace MagicConchShell.Services
                                         var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(eventObject.Message.Text)).ToList();
                                         if (matchingTitleData.Count == 0)
                                         {
-                                            TextReply(eventObject, $"神奇海螺找不到關於\"{eventObject.Message.Text}\"的結果！");
+                                            var noResult = new List<TextMessageDto>
+                                            {
+                                                new TextMessageDto() { Text = $"神奇海螺找不到關於\"{input}\"的結果！"}
+                                            };
+                                            TextReply(eventObject, noResult);
                                         }
                                         else if (matchingTitleData.Count > 1)
                                         {
-                                            var text = new List<TextMessageDto>();
-                                            string tempStr = "";
-                                            foreach (var data in matchingTitleData)
-                                            {
-                                                tempStr = $"{tempStr}\n{data.Title}";
-                                            }
-                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
+                                            overResult(eventObject, matchingTitleData);
                                         }
                                         else
                                         {
@@ -148,17 +144,15 @@ namespace MagicConchShell.Services
                                         var matchingTitleData = spongebobDatas.Where(data => data.Title == search).ToList();
                                         if (matchingTitleData.Count == 0)
                                         {
-                                            TextReply(eventObject, $"神奇海螺找不到關於\"{search}\"的結果！");
+                                            var noResult = new List<TextMessageDto>
+                                            {
+                                                new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
+                                            };
+                                            TextReply(eventObject, noResult);
                                         }
                                         else if (matchingTitleData.Count > 5)
                                         {
-                                            var text = new List<TextMessageDto>();
-                                            string tempStr = "";
-                                            foreach (var data in matchingTitleData)
-                                            {
-                                                tempStr = $"{tempStr}\n{data.Title}";
-                                            }
-                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
+                                            overResult(eventObject, matchingTitleData);
                                         }
                                         else
                                         {
@@ -169,21 +163,17 @@ namespace MagicConchShell.Services
                                     {
                                         string search = input.Substring(1, input.Length - 1);
                                         var matchingTitleData = spongebobDatas.Where(data => data.Title.Contains(search)).ToList();
-                                        Console.WriteLine(matchingTitleData);
                                         if (matchingTitleData.Count == 0)
                                         {
-                                            TextReply(eventObject, $"神奇海螺找不到關於\"{search}\"的結果！");
+                                            var noResult = new List<TextMessageDto>
+                                            {
+                                                new TextMessageDto() { Text = $"神奇海螺找不到關於\"{search}\"的結果！"}
+                                            };
+                                            TextReply(eventObject, noResult);
                                         }
                                         else if (matchingTitleData.Count > 1)
                                         {
-                                            var text = new List<TextMessageDto>();
-                                            string tempStr = "";
-                                            foreach (var data in matchingTitleData)
-                                            {
-                                                tempStr = $"{tempStr}\n{data.Title}";
-                                            }
-                                            Console.WriteLine(tempStr);
-                                            TextReply(eventObject, $"神奇海螺找到過多結果：{tempStr}");
+                                            overResult(eventObject, matchingTitleData);
                                         }
                                         else
                                         {
@@ -193,23 +183,48 @@ namespace MagicConchShell.Services
                                 }
                                 break;
                             default:
-                                TextReply(eventObject, "坐好！");
+                                var otherReply = new List<TextMessageDto>
+                                {
+                                    new TextMessageDto() { Text = "坐好！"}
+                                };
+                                TextReply(eventObject, otherReply);
                                 break;
                         }
                         break;
                     case WebhookEventTypeEnum.Join:
-                        var state = new ReplyMessageRequestDto<TextMessageDto>()
-                        {
-                            ReplyToken = eventObject.ReplyToken,
-                            Messages = new List<TextMessageDto>
+                        var message = new List<TextMessageDto>
                                 {
-                                    new TextMessageDto(){Text = "加入群組的神奇小海螺需在關鍵字前面加上星字號 (ex: *好棒三點了)"}
-                                }
-                        };
-                        ReplyMessageHandler("text", state);
+                                    new TextMessageDto() { Text = "加入群組的神奇小海螺需在關鍵字前面加上星字號 (ex: *好棒三點了)"}
+                                };
+                        TextReply(eventObject, message);
                         break;
                 }
             }
+        }
+
+        private void overResult(LineBotMessage.Dtos.WebhookEventsDto eventObject, List<SpongebobDatum> matchingTitleData)
+        {
+            List<string> strList = new List<string>();
+            string tempStr = "神奇海螺找到過多結果：";
+            int i = 1;
+            foreach (var data in matchingTitleData)
+            {
+                tempStr = tempStr + "\n(" + i + ") " + data.Title;
+                if (tempStr.Length / 4500 == 1)
+                {
+                    strList.Add(tempStr);
+                    tempStr = "．．．";
+                }
+                i += 1;
+            }
+            var overResult = new List<TextMessageDto>();
+            strList.Add(tempStr);
+            foreach (var str in strList)
+            {
+                overResult.Add(new TextMessageDto() { Text = str });
+            }
+
+            TextReply(eventObject, overResult);
         }
 
         private void ImageReply(LineBotMessage.Dtos.WebhookEventsDto eventObject, List<SpongebobDatum> matchingTitleData, bool isExact = false)
@@ -237,15 +252,12 @@ namespace MagicConchShell.Services
             ReplyMessageHandler("image", replyMessage);
         }
 
-        private void TextReply(LineBotMessage.Dtos.WebhookEventsDto eventObject, string textMessage)
+        private void TextReply(LineBotMessage.Dtos.WebhookEventsDto eventObject, List<TextMessageDto> message)
         {
             var Reply = new ReplyMessageRequestDto<TextMessageDto>()
             {
                 ReplyToken = eventObject.ReplyToken,
-                Messages = new List<TextMessageDto>
-                {
-                    new TextMessageDto() { Text = textMessage}
-                }
+                Messages = message
             };
             ReplyMessageHandler("text", Reply);
         }
