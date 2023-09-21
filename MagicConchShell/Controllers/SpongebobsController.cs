@@ -3,6 +3,7 @@ using MagicConchShell.Filter;
 using MagicConchShell.Models;
 using MagicConchShell.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -30,9 +31,10 @@ namespace MagicConchShell.Controllers
 
         // GET: api/<SpongebobsController>
         [HttpGet]
-        public IEnumerable<SpongebobDatum> Get()
+        public async Task<ActionResult<IEnumerable<SpongebobDatum>>> Get()
         {
-            return _spongebobsContextContext.SpongebobData.ToList();
+            var result = await _spongebobsContextContext.SpongebobData.ToListAsync();
+            return Ok(result);
         }
 
         [HttpPost("Webhook")]

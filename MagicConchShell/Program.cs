@@ -15,27 +15,20 @@ builder.Services.AddSingleton<LineBotService>();
 
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
-builder.Services.ConfigureSwaggerGen(setup =>
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 {
-    setup.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "spongebobs",
-        Version = "v1"
-    });
-});
+    policy.AllowAnyOrigin();
+    policy.AllowAnyMethod();
+    policy.AllowAnyHeader();
+}));
+
 
 var app = builder.Build();
-app.UseSwagger();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwaggerUI();
-}
+app.UseCors();
+
+
 
 app.UseHttpsRedirection();
 
