@@ -1,4 +1,6 @@
-# MagicConchShell
+<img width="64" src="https://github.com/IdONTKnowCHEK/MagicConchShell/assets/86880683/8bfe0a09-72d5-44a4-938c-142d9882a85d"/>
+
+
 ## [Add Friend](https://page.line.me/766lcoij)
 ### 快速查找海綿寶寶梗圖，支援個人和群組聊天室
 #### 使用說明
